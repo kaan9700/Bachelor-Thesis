@@ -1,1 +1,0 @@
-In dieses Verzeichnis kommen .eeg, .vhdr, .vmrk Dateien rein
