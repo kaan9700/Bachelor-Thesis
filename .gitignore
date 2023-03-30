@@ -1,1 +1,10 @@
 scripts/NeuralNet/hyperparameter_tuning
+files/eeg_files
+files/correlation_files
+
+files/windows_files/windows_flatlines.pickle
+files/windows_files/rest_data.pickle
+files/windows_files/window_dict.pickle
+
+files/epochs_files/epochs_flatlines.pickle
+files/epochs_files/rawdata.pickle
