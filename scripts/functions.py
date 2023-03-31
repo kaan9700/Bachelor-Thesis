@@ -97,9 +97,9 @@ def find_cut_peaks(windows, len, marg):
 
 def create_window_dict(all_windows, raw):
     window_dict = []
-    for idx, window in enumerate(all_windows):
-        for id, data in enumerate(window):
-            window_dict.append({'channel': raw.ch_names[idx], 'nr': id, 'data': data})
+    for idx, channel in enumerate(all_windows):
+        for window in channel:
+            window_dict.append({'channel': raw.ch_names[idx], 'nr': id, 'time': window['time'], 'data': window['data']})
     return window_dict
 
 
@@ -175,19 +175,19 @@ def show_all_plots(raw):
 
 
 def create_windows(overlap_val, window_size, raw_data, sample_rate):
-
     window_size = int(window_size)
     average_overlap = float(overlap_val)
-    overlap = int(window_size * average_overlap)  # Berechne die Überlappung
+    step_size = int(window_size * (1 - average_overlap))  # Berechne die Schrittgröße
     windows_set = []
 
-    windows = []
-    for i in range(0, len(raw_data) - window_size + 1, overlap):
-        start_time = i / sample_rate
-        end_time = (i + window_size) / sample_rate
-        time_range = f"{start_time:.2f}-{end_time:.2f}"
-        windows.append({'time': time_range, 'data': raw_data[i:i + window_size]})
-    windows_set.append(windows)
+    for data in raw_data:
+        windows = []
+        for i in range(0, len(data) - window_size + 1, step_size):
+            start_time = i / sample_rate
+            end_time = (i + window_size) / sample_rate
+            time_range = (start_time, end_time)
+            windows.append({'time': time_range, 'data': data[i:i + window_size]})
+        windows_set.append(windows)
 
     return windows_set
 
@@ -232,7 +232,7 @@ def eeg_filter(ica, notch, low, high, filename, norm, smoothing):
         data_minmax = np.array([data_minmax.min(), data_minmax.max()])
         min_value = np.min(data_minmax)
         max_value = np.max(data_minmax)
-
+        print(min_value, max_value)
         for idx, data in enumerate(raw.get_data()):
             # Initialize a list to store the normalized values
             normalized_data = []
@@ -443,9 +443,9 @@ def get_timepoint_for_index(data, index):
     return time_point
 
 
-def normalize_epochs(epochs):
+def normalize_epochs(win):
     # Extrahieren der Daten aus jedem Objekt in der Liste
-    data_list = [obj['data'] for obj in epochs]
+    data_list = [obj['data'] for obj in win]
 
     # Konvertieren der Daten in ein 1D-Array
     data_array = np.concatenate(data_list)
@@ -454,14 +454,13 @@ def normalize_epochs(epochs):
     max_value = np.max(data_array)
     min_value = np.min(data_array)
 
-
-    for idx, data in enumerate(epochs):
+    for idx, data in enumerate(win):
         normalized_data = []
         for value in data['data']:
             normalized_value = (value - min_value) / (max_value - min_value)
             normalized_data.append(normalized_value)
-        epochs[idx]['data'] = normalized_data
-    return epochs
+        win[idx]['data'] = normalized_data
+    return win
 
 
 if __name__ == "__main__":
