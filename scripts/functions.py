@@ -5,7 +5,6 @@ from mne.preprocessing import ICA
 import numpy as np
 import pickle
 import time
-from scipy.signal import find_peaks
 
 def is_linear(data, threshold):
     std = np.std(data)
@@ -391,8 +390,6 @@ def generate_random_noise(time, min_amp, max_amp, n_signals, prob_min=0.3, prob_
     return output_list
 
 
-import numpy as np
-
 def detect_peak(data_list, threshold):
     detected_peaks = []
     counter = 0
@@ -428,6 +425,7 @@ def detect_peak(data_list, threshold):
 
     print(counter)
     print(c)
+
 
 def get_timepoint_for_index(data, index):
     time_range = data['time']
@@ -476,7 +474,8 @@ def augment_data_list(data_list, count):
     def time_shift(d, shift_range=(-10, 10)):
         shift = np.random.randint(shift_range[0], shift_range[1])
         return np.roll(d, shift)
-    # Test
+
+
     augmented_data_list = []
     for _ in range(count):
         # Wähle zufällig eine Datenreihe aus der Liste
