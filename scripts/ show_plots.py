@@ -1,14 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from functions import load_np_array_pickle
+from functions import load_np_array_pickle, augment_data_list
 import time
-
+from scipy.signal import find_peaks
 
 def show_plots(epochs):
     start = 0
     end = 9
     fig, ax = plt.subplots(2, 5, sharex=True, sharey=True, figsize=(10, 5))
-    raw_data = load_np_array_pickle('../files/windows_files/final_windows.pickle')
+    raw_data = load_np_array_pickle('../files/windows_files/windows_flatlines.pickle')
     values = list(range(int(start), int(end) + 1))
 
     data_minmax = [el['data'] for el in raw_data]
@@ -49,6 +49,11 @@ def show_plots(epochs):
 
 
 if __name__ == '__main__':
-    predicted = load_np_array_pickle('../files/windows_files/final_windows.pickle')
+    predicted = load_np_array_pickle('../files/windows_files/windows_flatlines.pickle')
+    """
+        t = load_np_array_pickle('../files/windows_files/final_windows.pickle')
+    aug = augment_data_list(t, 50)
+    """
 
-    show_plots(predicted)
+    test_fl = load_np_array_pickle('../files/windows_files/test_del.pickle')
+    show_plots(test_fl)

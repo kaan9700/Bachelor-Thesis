@@ -25,32 +25,26 @@ def f1_m(y_true, y_pred):
 
 def ffnn_model(hp, inputShape, outputShape):
     # Hyperparameters
-    learning_rate = hp.Choice('learning_rate', values=[1e-2, 1e-3, 1e-4, 1e-5])
-    dropout_rate_1 = hp.Float('dropout_rate_1', min_value=0.0, max_value=0.5, step=0.1)
+    learning_rate = hp.Choice('learning_rate', values=[1e-4, 1e-5])
     dropout_rate_2 = hp.Float('dropout_rate_2', min_value=0.0, max_value=0.5, step=0.1)
     dropout_rate_3 = hp.Float('dropout_rate_3', min_value=0.0, max_value=0.5, step=0.1)
-    dropout_rate_4 = hp.Float('dropout_rate_4', min_value=0.0, max_value=0.5, step=0.1)
-    num_neurons_1 = hp.Int('num_neurons_1', min_value=16, max_value=512, step=16)
-    num_neurons_2 = hp.Int('num_neurons_2', min_value=16, max_value=512, step=16)
-    num_neurons_3 = hp.Int('num_neurons_3', min_value=16, max_value=512, step=16)
-    num_neurons_4 = hp.Int('num_neurons_4', min_value=16, max_value=512, step=16)
+    num_neurons_1 = hp.Int('num_neurons_1', min_value=16, max_value=64, step=16)
+    num_neurons_2 = hp.Int('num_neurons_2', min_value=16, max_value=32, step=16)
+    num_neurons_3 = hp.Int('num_neurons_3', min_value=16, max_value=32, step=16)
 
     # Define the model architecture
     model = tf.keras.Sequential([
         tf.keras.layers.Dense(num_neurons_1, activation='relu', input_shape=(inputShape,)),
-        tf.keras.layers.Dropout(dropout_rate_1),
         tf.keras.layers.Dense(num_neurons_2, activation='relu'),
         tf.keras.layers.Dropout(dropout_rate_2),
         tf.keras.layers.Dense(num_neurons_3, activation='relu'),
         tf.keras.layers.Dropout(dropout_rate_3),
-        tf.keras.layers.Dense(num_neurons_4, activation='relu'),
-        tf.keras.layers.Dropout(dropout_rate_4),
-        tf.keras.layers.Dense(1, activation='sigmoid')
+        tf.keras.layers.Dense(2, activation='softmax')
     ])
 
     # Compile the model
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
-                  loss=tf.keras.losses.BinaryCrossentropy(),
+                  loss=tf.keras.losses.SparseCategoricalCrossentropy(),
                   metrics=['accuracy', f1_m, precision_m, recall_m])
 
     return model
@@ -59,11 +53,11 @@ def ffnn_model(hp, inputShape, outputShape):
 def cnn_model(hp, inputShape, outputShape):
     # Hyperparameters
     learning_rate = hp.Choice('learning_rate', values=[1e-2, 1e-3, 1e-4, 1e-5])
-    filters = hp.Int('filters', min_value=16, max_value=512, step=16)
-    kernel_size = hp.Int('kernel_size', min_value=2, max_value=5, step=1)
-    pool_size = hp.Int('pool_size', min_value=2, max_value=5, step=1)
-    dense_units = hp.Int('dense_units', min_value=16, max_value=256, step=16)
-    dropout_rate = hp.Float('dropout_rate', min_value=0.0, max_value=0.7, step=0.1)
+    filters = hp.Int('filters', min_value=16, max_value=128, step=16)
+    kernel_size = hp.Int('kernel_size', min_value=1, max_value=4, step=1)
+    pool_size = hp.Int('pool_size', min_value=1, max_value=4, step=1)
+    dense_units = hp.Int('dense_units', min_value=16, max_value=64, step=16)
+    dropout_rate = hp.Float('dropout_rate', min_value=0.0, max_value=0.5, step=0.1)
 
 
     # Define the model architecture
@@ -72,7 +66,7 @@ def cnn_model(hp, inputShape, outputShape):
                                input_shape=(inputShape, 1)),
         tf.keras.layers.MaxPooling1D(pool_size=pool_size),
         tf.keras.layers.Dropout(dropout_rate),
-
+        tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Conv1D(filters=filters // 2, kernel_size=kernel_size, activation='relu'),
         tf.keras.layers.MaxPooling1D(pool_size=pool_size),
         tf.keras.layers.Dropout(dropout_rate),
@@ -80,13 +74,13 @@ def cnn_model(hp, inputShape, outputShape):
         tf.keras.layers.Flatten(),
         tf.keras.layers.Dense(dense_units, activation='relu'),
         tf.keras.layers.Dropout(dropout_rate),
-        tf.keras.layers.Dense(outputShape, activation='softmax')
+        tf.keras.layers.Dense(1, activation='sigmoid')
     ])
 
     # Compile the model
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
-                  loss=tf.keras.losses.SparseCategoricalCrossentropy(),
-                  metrics=['acc', f1_m, precision_m, recall_m])
+                  loss=tf.keras.losses.BinaryCrossentropy(),
+                  metrics=['accuracy', f1_m, precision_m, recall_m])
 
     return model
 

@@ -463,6 +463,46 @@ def normalize_epochs(win):
     return win
 
 
+def augment_data_list(data_list, count):
+
+    def add_noise(d, noise_factor=0.05):
+        noise = np.random.normal(0, noise_factor, len(d))
+        return d + noise
+
+    def scale_data(d, scale_range=(0.8, 1.2)):
+        scale = np.random.uniform(scale_range[0], scale_range[1])
+        return d * scale
+
+    def time_shift(d, shift_range=(-10, 10)):
+        shift = np.random.randint(shift_range[0], shift_range[1])
+        return np.roll(d, shift)
+
+    augmented_data_list = []
+    for _ in range(count):
+        # Wähle zufällig eine Datenreihe aus der Liste
+        data_idx = np.random.randint(0, len(data_list))
+        data = data_list[data_idx]['data']
+
+        choice = np.random.randint(0, 7)
+        if choice == 0:
+            new_data = add_noise(data)
+        elif choice == 1:
+            new_data = scale_data(data)
+        elif choice == 2:
+            new_data = time_shift(data)
+        elif choice == 3:
+            new_data = add_noise(scale_data(data))
+        elif choice == 4:
+            new_data = add_noise(time_shift(data))
+        elif choice == 5:
+            new_data = scale_data(time_shift(data))
+        else:
+            new_data = add_noise(scale_data(time_shift(data)))
+        augmented_data_list.append(new_data)
+    return augmented_data_list
+
+
+
 if __name__ == "__main__":
     epoch_dict = load_np_array_pickle('../files/epochs_files/epoch_check.pickle')
     epoch_dict = normalize_epochs(epoch_dict)

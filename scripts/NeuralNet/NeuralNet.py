@@ -11,7 +11,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 import keras_tuner as kt
 from keras_models import ffnn_model, cnn_model, rnn_model, f1_m, precision_m, recall_m
 import math
-
+from keras.regularizers import l2
 
 tf.config.set_visible_devices([], 'GPU')
 
@@ -26,7 +26,7 @@ data = [el['data'] for el in data_dict]
 all_flatlines = load_np_array_pickle('../../files/windows_files/windows_flatlines.pickle')
 print(len(all_flatlines))
 
-amount_flatlines = math.floor(len(data) / 2)
+amount_flatlines = len(data)
 flatlines = random.sample(all_flatlines, amount_flatlines)
 flatlines = [el['data'] for el in flatlines]
 flatlines = np.array(flatlines)
@@ -35,7 +35,7 @@ noise = generate_random_noise(n_signals=math.ceil(len(data) / 2), time=len(data[
 
 
 positive_data = data
-negative_data = np.concatenate((flatlines, noise), axis=0)
+negative_data = flatlines
 
 
 # Zielvariablen erstellen (1 für Signal, 0 für Nicht-Signal)
@@ -54,62 +54,60 @@ labels_train = np.array(labels_train)
 labels_test = np.array(labels_test)
 
 
-print(len(positive_labels))
-print(len(negative_labels))
 
-output_dense = len(np.unique(labels_train))
 epochs = 100
-batch_size = 32
+batch_size = 128
 
 ann_type = input("Welche Netzarchitektur soll verwendet werden:\nFeedforward = 1\nConvolutional = 2\nRecurrent = 3\n\n")
 
 if ann_type == "1":
     model_name = 'ffnn'
-
-    tuner = kt.Hyperband(
-        lambda hp: ffnn_model(hp, inputShape=(len(data[0])), outputShape=output_dense),
+    """
+        tuner = kt.Hyperband(
+        lambda hp: ffnn_model(hp, inputShape=(len(data[0]))),
         objective='val_accuracy',
         max_epochs=epochs,
         factor=3,
         directory='hyperparameter_tuning',
         project_name='ffnn')
-
-
-
-if ann_type == "2":
-    model_name = 'cnn'
     """
-        tuner = kt.Hyperband(
-        lambda hp: cnn_model(hp, inputShape=(len(data[0])), outputShape=output_dense),
-        objective='val_accuracy',
-        max_epochs=epochs,
-        factor=3,
-        directory='hyperparameter_tuning',
-        project_name='cnn')
-    """
-
     model = tf.keras.Sequential([
-        tf.keras.layers.Conv1D(filters=160, kernel_size=4, activation='relu',
-                               input_shape=(301, 1)),
-
-        tf.keras.layers.MaxPooling1D(pool_size=2),
-        tf.keras.layers.Dropout(0.4),
-
-        tf.keras.layers.Conv1D(filters=160 // 2, kernel_size=4, activation='relu'),
-
-        tf.keras.layers.MaxPooling1D(pool_size=2),
-        tf.keras.layers.Dropout(0.4),
-
-        tf.keras.layers.Flatten(),
-        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.Dense(16, activation='relu', input_shape=(len(data[0]),)),
+        tf.keras.layers.Dense(16, activation='relu'),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(8, activation='relu'),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
 
     # Compile the model
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=2e-4),
+                  loss=tf.keras.losses.BinaryCrossentropy(),
+                  metrics=['accuracy', f1_m, precision_m, recall_m])
+
+
+
+if ann_type == "2":
+    model_name = 'cnn'
+
+    model = tf.keras.Sequential([
+        tf.keras.layers.Conv1D(filters=32, kernel_size=4, activation='relu',
+                               input_shape=(300, 1)),
+        tf.keras.layers.MaxPooling1D(pool_size=1),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Conv1D(filters=32, kernel_size=4, activation='relu'),
+        tf.keras.layers.MaxPooling1D(pool_size=1),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Flatten(),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(1, activation='sigmoid')
+    ])
+        # Compile the model
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
                   loss=tf.keras.losses.BinaryCrossentropy(),
                   metrics='accuracy')
+
 
 
 if ann_type == "3":
@@ -124,12 +122,7 @@ if ann_type == "3":
         directory='hyperparameter_tuning',
         project_name='rnn')
         
-    # Define early stopping
-early_stopping = EarlyStopping(
-    monitor='val_loss',
-    patience=5,
-    restore_best_weights=True
-)
+
 
     """
     model = tf.keras.Sequential([
@@ -147,25 +140,26 @@ early_stopping = EarlyStopping(
                   metrics='accuracy')
 
 
-if ann_type != "1" and ann_type != "2" and ann_type != "3":
-    print('Bitte starte das Programm neu und gib eine zulässige Eingabe ein.')
-    sys.exit()
 
+
+"""
 # Run Keras Tuner search and training with early stopping
 tuner.search(data_train, labels_train, batch_size=batch_size, epochs=epochs,
-             validation_data=(data_test, labels_test))
+             validation_data=(data_test, labels_test), callbacks=[early_stopping])
 
 best_model = tuner.get_best_models(num_models=1)[0]
+"""
+
 
 # Train the best model on the full dataset
-history = best_model.fit(data, labels, batch_size=batch_size, epochs=epochs, validation_data=(data_test, labels_test))
+history = model.fit(data, labels, batch_size=batch_size, epochs=epochs, validation_data=(data_test, labels_test))
 
 
 
 
-best_model.save("./models/"+model_name+".h5")
+model.save("./models/"+model_name+".h5")
 
-plot_model(best_model, to_file='model_'+model_name+'.png', show_shapes=True, show_layer_names=True)
+plot_model(model, to_file='model_'+model_name+'.png', show_shapes=True, show_layer_names=True)
 plt.plot(history.history['accuracy'])
 plt.plot(history.history['val_accuracy'])
 plt.title('model accuracy')
